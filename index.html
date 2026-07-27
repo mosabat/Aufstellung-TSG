@@ -637,169 +637,256 @@ async function downloadImage() {
     const uhrzeit  = document.getElementById('uhrzeit').value || '';
     const treff    = document.getElementById('treffpunkt').value.trim();
     const nominated = players.filter(p => selected.has(p.num + '_' + p.name));
-
-    // ── Canvas setup ──
-    const S = 3;
-    const W = 360 * S;
     const treffLines = treff ? treff.split('\n').filter(Boolean) : [];
-    const PLAYER_H = 52;
-    const H = (200 + 100 + (treffLines.length ? treffLines.length*32+24 : 0) + 60 + nominated.length*PLAYER_H + 28 + 60) * S;
+
+    // ── Match the exact rendered width of .gc (max 400px)
+    // We render at 2x for sharpness
+    const PX = 2;
+    const W = 400 * PX;
+
+    // Measure heights exactly as CSS does
+    const STRIPE_H   = (18 + 14 + 4 + 30 + 10 + 24 + 16) * PX; // padding-top + club + gap + event + stripe-bottom + pill + padding-bottom
+    const INFO_H     = (14 + 9 + 4 + 20 + 14) * PX;             // padding + label + gap + name + padding
+    const TREFF_H    = treffLines.length ? (10 + treffLines.length * 28 + 10) * PX : 0;
+    const SQUAD_TOP_PAD = 16 * PX;
+    const HEADER_H   = 9 * PX + 4 * PX + 10 * PX; // label + gap + margin
+    const PLAYER_H   = (4 + 18 + 4) * PX;          // padding-top + line-height + padding-bottom + border = ~40px
+    const SQUAD_BOT_PAD = 20 * PX;
+    const FOOTER_H   = (10 + 11 + 10 + 10) * PX;
+
+    const SQUAD_H = SQUAD_TOP_PAD + HEADER_H + (nominated.length * PLAYER_H) + SQUAD_BOT_PAD;
+    const H = STRIPE_H + INFO_H + TREFF_H + SQUAD_H + FOOTER_H;
 
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
 
-    const RED = '#C41E1E', DARK = '#0d0d0d', DARK2 = '#161616';
+    // ── Colors exactly from CSS ──
+    const RED      = '#C41E1E';
+    const RED_DARK = '#8B1010';
+    const BG       = '#0d0d0d';
+    const BG2      = '#161616';
+    const BG3      = '#1f1f1f';
 
-    // Load logo first, then draw everything
+    // ── Font helper – uses system fonts that match iOS rendering ──
+    const F = {
+      condensedBlack: (sz) => `900 ${sz*PX}px 'Arial Narrow', 'Impact', Arial, sans-serif`,
+      condensedBold:  (sz) => `700 ${sz*PX}px 'Arial Narrow', Arial, sans-serif`,
+      bold:           (sz) => `700 ${sz*PX}px Arial, sans-serif`,
+      regular:        (sz) => `600 ${sz*PX}px Arial, sans-serif`,
+    };
+
+    let y = 0;
+
+    /* ══════════════════════════════
+       RED STRIPE
+    ══════════════════════════════ */
+    c.fillStyle = RED;
+    c.fillRect(0, 0, W, STRIPE_H);
+
+    // Club label
+    c.fillStyle = 'rgba(255,255,255,0.6)';
+    c.font = F.condensedBold(11);
+    c.letterSpacing = `${3*PX}px`;
+    c.fillText('DARMSTÄDTER TSG 1846', 22*PX, 32*PX);
+    c.letterSpacing = '0px';
+
+    // Liga / Event name
+    c.fillStyle = '#ffffff';
+    c.font = F.condensedBlack(30);
+    c.fillText(liga.toUpperCase(), 22*PX, 70*PX);
+
+    // HA pill – right aligned, same line as liga
+    c.font = F.condensedBold(11);
+    c.letterSpacing = `${1.5*PX}px`;
+    const haW = c.measureText(ha).width + 24*PX;
+    const haX = W - haW - 22*PX;
+    const haY = 50*PX;
+    c.fillStyle = 'rgba(0,0,0,0.28)';
+    c.beginPath();
+    c.roundRect(haX, haY, haW, 22*PX, 5*PX);
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.9)';
+    c.fillText(ha, haX + 12*PX, haY + 15*PX);
+    c.letterSpacing = '0px';
+
+    y = STRIPE_H;
+
+    /* ══════════════════════════════
+       INFO BAR
+    ══════════════════════════════ */
+    c.fillStyle = BG2;
+    c.fillRect(0, y, W, INFO_H);
+    // bottom border
+    c.fillStyle = '#222222';
+    c.fillRect(0, y + INFO_H - PX, W, PX);
+
+    const IY = y;
+
+    // "GEGNER" label
+    c.fillStyle = '#555555';
+    c.font = F.condensedBold(9);
+    c.letterSpacing = `${2*PX}px`;
+    c.fillText('GEGNER', 22*PX, IY + 24*PX);
+    c.letterSpacing = '0px';
+
+    // Gegner name
+    c.fillStyle = '#ffffff';
+    c.font = F.condensedBlack(20);
+    c.fillText(gegner.toUpperCase(), 22*PX, IY + 60*PX);
+
+    // Date + time right
+    c.textAlign = 'right';
+    c.fillStyle = '#ffffff';
+    c.font = F.condensedBold(15);
+    c.fillText(datum, W - 22*PX, IY + 36*PX);
+    c.fillStyle = '#666666';
+    c.font = F.condensedBold(11);
+    c.fillText(uhrzeit, W - 22*PX, IY + 56*PX);
+    c.textAlign = 'left';
+
+    y += INFO_H;
+
+    /* ══════════════════════════════
+       TREFFPUNKT
+    ══════════════════════════════ */
+    if (treffLines.length) {
+      c.fillStyle = '#111111';
+      c.fillRect(0, y, W, TREFF_H);
+      c.fillStyle = '#1a1a1a';
+      c.fillRect(0, y + TREFF_H - PX, W, PX);
+
+      let ty = y + 22*PX;
+      treffLines.forEach(l => {
+        const ci = l.indexOf(':');
+        if (ci > -1) {
+          c.fillStyle = '#444444';
+          c.font = F.condensedBold(9);
+          c.letterSpacing = `${1*PX}px`;
+          c.fillText(l.slice(0, ci).toUpperCase() + ':', 22*PX, ty);
+          c.letterSpacing = '0px';
+          c.fillStyle = '#888888';
+          c.font = F.regular(10);
+          c.fillText(l.slice(ci + 1).trim(), 110*PX, ty);
+        } else {
+          c.fillStyle = '#888888';
+          c.font = F.regular(10);
+          c.fillText(l, 22*PX, ty);
+        }
+        ty += 28*PX;
+      });
+      y += TREFF_H;
+    }
+
+    /* ══════════════════════════════
+       SQUAD
+    ══════════════════════════════ */
+    const squadTop = y;
+    c.fillStyle = BG;
+    c.fillRect(0, y, W, SQUAD_H + FOOTER_H);
+
+    y += SQUAD_TOP_PAD;
+
+    // "AUFSTELLUNG" label
+    c.fillStyle = '#444444';
+    c.font = F.condensedBold(9);
+    c.letterSpacing = `${3*PX}px`;
+    c.fillText('AUFSTELLUNG', 22*PX, y + 9*PX);
+    c.letterSpacing = '0px';
+    y += HEADER_H;
+
+    const playerAreaTop = y;
+    const logoColX = W - 120*PX; // logo sits in right ~120px
+
+    nominated.forEach((p, i) => {
+      // divider line between players
+      if (i > 0) {
+        c.fillStyle = '#161616';
+        c.fillRect(22*PX, y - PX, logoColX - 30*PX, PX);
+      }
+
+      // Number – right-aligned in a 22px column
+      c.fillStyle = RED;
+      c.font = F.condensedBlack(13);
+      c.textAlign = 'right';
+      c.fillText(String(p.num), 48*PX, y + 17*PX);
+      c.textAlign = 'left';
+
+      // Name
+      c.fillStyle = '#ffffff';
+      c.font = F.condensedBlack(17);
+      c.fillText(p.name, 56*PX, y + 18*PX);
+
+      // Roles – small, after name
+      const roles = p.roles || (p.role ? [p.role] : []);
+      if (roles.length) {
+        const nw = c.measureText(p.name).width;
+        c.fillStyle = '#555555';
+        c.font = F.condensedBold(9);
+        c.fillText(roles.join('/'), 56*PX + nw + 6*PX, y + 16*PX);
+      }
+
+      y += PLAYER_H;
+    });
+
+    // Logo – centered vertically in player area
     await new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        let y = 0;
-
-        /* RED STRIPE */
-        c.fillStyle = RED;
-        c.fillRect(0, 0, W, 200*S);
-
-        c.fillStyle = 'rgba(255,255,255,0.6)';
-        c.font = `700 ${11*S}px Arial Narrow,Arial`;
-        c.fillText('DARMSTÄDTER TSG 1846', 22*S, 34*S);
-
-        c.fillStyle = '#fff';
-        c.font = `900 ${28*S}px Arial Narrow,Arial`;
-        c.fillText(liga.toUpperCase(), 22*S, 74*S);
-
-        // HA pill
-        c.font = `700 ${10*S}px Arial Narrow,Arial`;
-        const pw = c.measureText(ha).width + 20*S;
-        const px = W - pw - 22*S;
-        c.fillStyle = 'rgba(0,0,0,0.3)';
-        c.beginPath(); c.roundRect(px, 56*S, pw, 22*S, 4*S); c.fill();
-        c.fillStyle = 'rgba(255,255,255,0.9)';
-        c.fillText(ha, px + 10*S, 72*S);
-
-        y = 200*S;
-
-        /* INFO BAR */
-        c.fillStyle = DARK2;
-        c.fillRect(0, y, W, 100*S);
-        c.fillStyle = '#333'; c.fillRect(0, y+100*S-1, W, 1);
-
-        c.fillStyle = '#555';
-        c.font = `700 ${8*S}px Arial Narrow,Arial`;
-        c.fillText('GEGNER', 22*S, y+24*S);
-
-        c.fillStyle = '#fff';
-        c.font = `900 ${19*S}px Arial Narrow,Arial`;
-        c.fillText(gegner.toUpperCase(), 22*S, y+66*S);
-
-        c.textAlign = 'right';
-        c.fillStyle = '#fff';
-        c.font = `700 ${14*S}px Arial Narrow,Arial`;
-        c.fillText(datum, W-22*S, y+46*S);
-        c.fillStyle = '#666';
-        c.font = `700 ${11*S}px Arial Narrow,Arial`;
-        c.fillText(uhrzeit, W-22*S, y+70*S);
-        c.textAlign = 'left';
-
-        y += 100*S;
-
-        /* TREFFPUNKT */
-        if (treffLines.length) {
-          const TH = (treffLines.length*32+24)*S;
-          c.fillStyle = '#111'; c.fillRect(0, y, W, TH);
-          let ty = y+28*S;
-          treffLines.forEach(l => {
-            const ci = l.indexOf(':');
-            if (ci > -1) {
-              c.fillStyle='#444'; c.font=`700 ${9*S}px Arial Narrow,Arial`;
-              c.fillText(l.slice(0,ci).toUpperCase()+':', 22*S, ty);
-              c.fillStyle='#888'; c.font=`600 ${10*S}px Arial Narrow,Arial`;
-              c.fillText(l.slice(ci+1).trim(), 100*S, ty);
-            } else {
-              c.fillStyle='#888'; c.font=`600 ${10*S}px Arial Narrow,Arial`;
-              c.fillText(l, 22*S, ty);
-            }
-            ty += 32*S;
-          });
-          y += TH;
-        }
-
-        /* SQUAD */
-        const squadTop = y;
-        const squadH = (60 + nominated.length*PLAYER_H + 28)*S;
-        c.fillStyle = DARK; c.fillRect(0, y, W, squadH + 60*S);
-
-        c.fillStyle = '#444'; c.font=`700 ${8*S}px Arial Narrow,Arial`;
-        c.fillText('AUFSTELLUNG', 22*S, y+32*S);
-        y += 48*S;
-
-        const playerStart = y;
-        nominated.forEach((p, i) => {
-          if (i>0) { c.fillStyle='#1a1a1a'; c.fillRect(22*S, y-1, W-120*S, 1); }
-          // number
-          c.fillStyle = RED; c.font=`900 ${13*S}px Arial Narrow,Arial`;
-          c.textAlign='right'; c.fillText(String(p.num), 50*S, y+34*S); c.textAlign='left';
-          // name
-          c.fillStyle='#fff'; c.font=`800 ${17*S}px Arial Narrow,Arial`;
-          c.fillText(p.name, 58*S, y+35*S);
-          // roles
-          const roles = p.roles || (p.role ? [p.role] : []);
-          if (roles.length) {
-            const nw = c.measureText(p.name).width;
-            c.fillStyle='#555'; c.font=`700 ${9*S}px Arial Narrow,Arial`;
-            c.fillText(roles.join('/'), 58*S+nw+6*S, y+33*S);
-          }
-          y += PLAYER_H*S;
-        });
-
-        // Logo centered in squad
-        const logoW = 88*S, logoH = logoW*(img.height/img.width);
-        const logoX = W - logoW - 20*S;
-        const logoY = playerStart + (nominated.length*PLAYER_H*S)/2 - logoH/2;
-        c.globalAlpha = 0.8;
+        const logoW = 96*PX;
+        const logoH = logoW * (img.height / img.width);
+        const logoX = W - logoW - 18*PX;
+        const playerMid = playerAreaTop + (nominated.length * PLAYER_H) / 2;
+        const logoY = playerMid - logoH / 2;
+        c.globalAlpha = 0.82;
         c.drawImage(img, logoX, logoY, logoW, logoH);
         c.globalAlpha = 1;
-
-        y = squadTop + squadH;
-
-        /* FOOTER */
-        c.fillStyle = RED; c.fillRect(0, y, W, 60*S);
-        c.fillStyle = 'rgba(255,255,255,0.7)';
-        c.font = `700 ${9*S}px Arial Narrow,Arial`;
-        c.textAlign='center';
-        c.fillText('LÖWEN IM SPIEL  ·  GEMEINSAM BIS ANS ZIEL', W/2, y+36*S);
-        c.textAlign='left';
-
         resolve();
       };
       img.onerror = reject;
       img.src = LOGO;
     });
 
-    // ── Share or Download ──
-    const filename = 'TSG_' + gegner.replace(/\s+/g,'_') + (datum ? '_'+datum.replace(/\./g,'-') : '') + '.png';
+    /* ══════════════════════════════
+       FOOTER
+    ══════════════════════════════ */
+    const footerY = squadTop + SQUAD_H;
+    c.fillStyle = RED;
+    c.fillRect(0, footerY, W, FOOTER_H);
+
+    c.fillStyle = 'rgba(255,255,255,0.65)';
+    c.font = F.condensedBold(9);
+    c.letterSpacing = `${1.5*PX}px`;
+    c.textAlign = 'center';
+    c.fillText('LÖWEN IM SPIEL  ·  GEMEINSAM BIS ANS ZIEL', W / 2, footerY + 26*PX);
+    c.textAlign = 'left';
+    c.letterSpacing = '0px';
+
+    /* ══════════════════════════════
+       SHARE / DOWNLOAD
+    ══════════════════════════════ */
+    const filename = 'TSG_' + gegner.replace(/\s+/g, '_') + (datum ? '_' + datum.replace(/\./g, '-') : '') + '.png';
 
     cv.toBlob(async (blob) => {
-      if (navigator.share && navigator.canShare) {
+      try {
         const file = new File([blob], filename, { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file], title: 'TSG Aufstellung' });
-          btn.textContent = '⬆ Teilen';
-          btn.disabled = false;
-          return;
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = filename; a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
+      } catch (e) {
+        if (e.name !== 'AbortError') alert('Fehler: ' + e.message);
+      } finally {
+        btn.textContent = '⬆ Teilen';
+        btn.disabled = false;
       }
-      // Fallback: direct download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      btn.textContent = '⬆ Teilen';
-      btn.disabled = false;
     }, 'image/png');
 
-  } catch(e) {
+  } catch (e) {
     console.error(e);
     alert('Fehler: ' + e.message);
     btn.textContent = '⬆ Teilen';
