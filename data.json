@@ -21,6 +21,11 @@
       "role": ""
     },
     {
+      "num": 7,
+      "name": "LASSE",
+      "role": ""
+    },
+    {
       "num": 10,
       "name": "TIM",
       "role": ""
@@ -30,5 +35,5 @@
     "SV. ST. STEPHAN GRIESHEIM"
   ],
   "selected": [],
-  "updatedAt": "2026-07-27T02:51:05.996Z"
+  "updatedAt": "2026-07-27T02:51:19.694Z"
 }
