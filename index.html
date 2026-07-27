@@ -130,11 +130,9 @@ textarea { resize: vertical; min-height: 64px; }
 .gc-stripe { background: var(--red); padding: 18px 22px 14px; }
 .gc-club { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,.6); margin-bottom: 2px; }
 .gc-event { font-size: 30px; font-weight: 900; color: #fff; line-height: 1; letter-spacing: -.5px; text-transform: uppercase; }
-.gc-stripe-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.gc-stripe-bottom { display: flex; align-items: center; justify-content: flex-end; margin-top: 10px; }
 .gc-type-pill { background: rgba(0,0,0,.25); border-radius: 5px; padding: 5px 12px;
   font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: rgba(255,255,255,.9); text-transform: uppercase; }
-.gc-logo-center { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; }
-.gc-logo-center img { width: 100%; height: auto; }
 
 .gc-info { background: #161616; padding: 14px 22px; display: flex; align-items: center; border-bottom: 1px solid #222; }
 .gc-vs { flex: 1; }
@@ -148,7 +146,7 @@ textarea { resize: vertical; min-height: 64px; }
 .gc-treff-row { display: flex; gap: 8px; font-size: 11px; color: #888; font-weight: 600; line-height: 1.7; }
 .gc-treff-key { color: #444; min-width: 72px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
 
-.gc-squad { background: #0d0d0d; padding: 16px 22px 20px; display: flex; gap: 16px; align-items: flex-start; }
+.gc-squad { background: #0d0d0d; padding: 16px 22px 20px; display: flex; gap: 16px; align-items: center; }
 .gc-players { flex: 1; }
 .gc-squad-header { font-size: 9px; letter-spacing: 3px; color: #444; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
 .gc-player { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; border-bottom: 1px solid #161616; }
@@ -156,7 +154,7 @@ textarea { resize: vertical; min-height: 64px; }
 .gc-pnum { font-size: 13px; font-weight: 900; color: var(--red); min-width: 22px; text-align: right; flex-shrink: 0; }
 .gc-pname { font-size: 18px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: .5px; flex: 1; }
 .gc-ptag { font-size: 10px; color: #555; font-weight: 700; flex-shrink: 0; }
-.gc-emblem-wrap { width: 100px; flex-shrink: 0; padding-top: 4px; }
+.gc-emblem-wrap { width: 100px; flex-shrink: 0; align-self: center; }
 .gc-emblem-wrap img { width: 100%; height: auto; opacity: .8; }
 
 .gc-footer { background: var(--red); padding: 10px 22px; text-align: center; }
@@ -543,8 +541,6 @@ function generate() {
       <div class="gc-event">${liga}</div>
       <div class="gc-stripe-bottom">
         <span class="gc-type-pill">${ha}</span>
-        <div class="gc-logo-center"><img src="${LOGO}" alt="TSG 1846"></div>
-        <span class="gc-type-pill" style="opacity:0">${ha}</span>
       </div>
     </div>
     <div class="gc-info">
