@@ -49,11 +49,16 @@
       "num": 13,
       "name": "MORITZ",
       "role": "ETW"
+    },
+    {
+      "num": 14,
+      "name": "ONA",
+      "role": "C"
     }
   ],
   "opponents": [
     "SV. ST. STEPHAN GRIESHEIM"
   ],
   "selected": [],
-  "updatedAt": "2026-07-27T02:52:02.054Z"
+  "updatedAt": "2026-07-27T02:52:09.023Z"
 }
