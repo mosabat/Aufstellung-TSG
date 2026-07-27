@@ -44,11 +44,16 @@
       "num": 12,
       "name": "PAUL S",
       "role": ""
+    },
+    {
+      "num": 13,
+      "name": "MORITZ",
+      "role": "ETW"
     }
   ],
   "opponents": [
     "SV. ST. STEPHAN GRIESHEIM"
   ],
   "selected": [],
-  "updatedAt": "2026-07-27T02:51:54.472Z"
+  "updatedAt": "2026-07-27T02:52:02.054Z"
 }
