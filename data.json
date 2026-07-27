@@ -3,7 +3,10 @@
     {
       "num": 1,
       "name": "NOEL",
-      "role": "TW"
+      "role": "TW",
+      "roles": [
+        "C"
+      ]
     },
     {
       "num": 2,
@@ -75,5 +78,5 @@
     "SV. ST. STEPHAN GRIESHEIM"
   ],
   "selected": [],
-  "updatedAt": "2026-07-27T02:53:01.066Z"
+  "updatedAt": "2026-07-27T03:00:31.052Z"
 }
