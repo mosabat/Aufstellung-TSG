@@ -286,6 +286,7 @@ let opponents = [];
 let selected  = new Set();
 let ha        = 'HEIM';
 let fileSha   = null; // GitHub needs the SHA to update a file
+let syncReady = false; // prevents saving before initial load
 
 /* ══════════════════════════════
    GITHUB SYNC
@@ -307,6 +308,7 @@ async function loadFromGitHub() {
     const res = await fetch(API, { headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github.v3+json' } });
     if (res.status === 404) {
       // File doesn't exist yet → start fresh, will be created on first save
+      syncReady = true;
       setSyncStatus('ok', 'Verbunden – neu');
       return;
     }
@@ -319,6 +321,7 @@ async function loadFromGitHub() {
     selected  = new Set(data.selected || []);
     saveLocal();
     renderAll();
+    syncReady = true;
     const ts = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '';
     setSyncStatus('ok', 'Synchronisiert' + (ts ? ' · ' + ts : ''));
   } catch(e) {
@@ -330,6 +333,7 @@ async function loadFromGitHub() {
 async function saveToGitHub() {
   const token = getToken();
   if (!token) { saveLocal(); return; }
+  if (!syncReady) { saveLocal(); return; } // don't overwrite before initial load
   setSyncStatus('loading', 'Speichere…');
   try {
     const data = { players, opponents, selected: [...selected], updatedAt: new Date().toISOString() };
@@ -365,6 +369,7 @@ function loadLocal() {
   players   = JSON.parse(localStorage.getItem('tsg_players')   || '[]');
   opponents = JSON.parse(localStorage.getItem('tsg_opponents') || '[]');
   selected  = new Set(JSON.parse(localStorage.getItem('tsg_selected') || '[]'));
+  syncReady = true;
   renderAll();
 }
 
