@@ -59,11 +59,16 @@
       "num": 15,
       "name": "JULIAN",
       "role": ""
+    },
+    {
+      "num": 16,
+      "name": "PAUL S",
+      "role": ""
     }
   ],
   "opponents": [
     "SV. ST. STEPHAN GRIESHEIM"
   ],
   "selected": [],
-  "updatedAt": "2026-07-27T02:52:33.776Z"
+  "updatedAt": "2026-07-27T02:52:46.050Z"
 }
