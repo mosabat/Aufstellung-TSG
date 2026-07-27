@@ -1,6 +1,11 @@
 {
   "players": [
     {
+      "num": 1,
+      "name": "NOEL",
+      "role": "TW"
+    },
+    {
       "num": 10,
       "name": "TIM",
       "role": ""
@@ -10,5 +15,5 @@
     "SV. ST. STEPHAN GRIESHEIM"
   ],
   "selected": [],
-  "updatedAt": "2026-07-27T02:49:50.064Z"
+  "updatedAt": "2026-07-27T02:50:45.613Z"
 }
