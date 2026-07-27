@@ -633,22 +633,201 @@ async function downloadImage() {
   btn.textContent = '⏳ Wird erstellt…';
   btn.disabled = true;
   try {
-    const card = document.getElementById('graphic');
-    const canvas = await html2canvas(card, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: '#0d0d0d',
-      logging: false
+    const liga    = document.getElementById('liga').value || 'Kreisliga';
+    const gegner  = document.getElementById('gegner-select').value || '–';
+    const datum   = document.getElementById('datum').value || '';
+    const uhrzeit = document.getElementById('uhrzeit').value || '';
+    const treff   = document.getElementById('treffpunkt').value.trim();
+    const nominated = players.filter(p => selected.has(p.num + '_' + p.name));
+
+    const W = 1080;
+    const S = 3; // scale factor (W/360)
+    const STRIPE_H  = 200;
+    const INFO_H    = 120;
+    const treffLines = treff ? treff.split('\n').filter(Boolean) : [];
+    const TREFF_H   = treffLines.length ? (treffLines.length * 36 + 28) * S : 0;
+    const SQUAD_PAD = 80;
+    const PLAYER_H  = 56;
+    const FOOTER_H  = 80;
+    const SQUAD_H   = SQUAD_PAD + nominated.length * PLAYER_H * S;
+    const H = (STRIPE_H + INFO_H) * S + TREFF_H + SQUAD_H + FOOTER_H * S;
+
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+
+    const RED = '#C41E1E', DARK = '#0d0d0d', DARK2 = '#161616';
+
+    function rr(x,y,w,h,r){
+      c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y);
+      c.arcTo(x+w,y,x+w,y+r,r); c.lineTo(x+w,y+h-r);
+      c.arcTo(x+w,y+h,x+w-r,y+h,r); c.lineTo(x+r,y+h);
+      c.arcTo(x,y+h,x,y+h-r,r); c.lineTo(x,y+r);
+      c.arcTo(x,y,x+r,y,r); c.closePath();
+    }
+
+    let y = 0;
+
+    /* ── RED STRIPE ── */
+    c.fillStyle = RED;
+    c.fillRect(0, 0, W, STRIPE_H * S);
+
+    c.fillStyle = 'rgba(255,255,255,0.6)';
+    c.font = `700 ${11*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.letterSpacing = `${3*S}px`;
+    c.fillText('DARMSTÄDTER TSG 1846', 22*S, 38*S);
+    c.letterSpacing = '0px';
+
+    // Liga
+    c.fillStyle = '#fff';
+    c.font = `900 ${30*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.fillText(liga.toUpperCase(), 22*S, 80*S);
+
+    // HA pill right
+    c.font = `800 ${11*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.letterSpacing = `${1.5*S}px`;
+    const pillW = c.measureText(ha).width + 24*S;
+    const pillX = W - pillW - 22*S;
+    c.fillStyle = 'rgba(0,0,0,0.28)';
+    rr(pillX, 62*S, pillW, 24*S, 5*S); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.9)';
+    c.fillText(ha, pillX + 12*S, 79*S);
+    c.letterSpacing = '0px';
+
+    y = STRIPE_H * S;
+
+    /* ── INFO BAR ── */
+    c.fillStyle = DARK2;
+    c.fillRect(0, y, W, INFO_H * S);
+    c.fillStyle = '#222';
+    c.fillRect(0, y + INFO_H*S - 2, W, 2);
+
+    c.fillStyle = '#555';
+    c.font = `700 ${9*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.letterSpacing = `${2*S}px`;
+    c.fillText('GEGNER', 22*S, y + 28*S);
+    c.letterSpacing = '0px';
+
+    c.fillStyle = '#fff';
+    c.font = `900 ${20*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.fillText(gegner.toUpperCase(), 22*S, y + 72*S);
+
+    c.textAlign = 'right';
+    c.fillStyle = '#fff';
+    c.font = `800 ${15*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.fillText(datum, W - 22*S, y + 52*S);
+    c.fillStyle = '#666';
+    c.font = `700 ${12*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.fillText(uhrzeit, W - 22*S, y + 76*S);
+    c.textAlign = 'left';
+
+    y += INFO_H * S;
+
+    /* ── TREFFPUNKT ── */
+    if (treffLines.length) {
+      const TH = TREFF_H;
+      c.fillStyle = '#111';
+      c.fillRect(0, y, W, TH);
+      c.fillStyle = '#1a1a1a';
+      c.fillRect(0, y + TH - 2, W, 2);
+      let ty = y + 28*S;
+      treffLines.forEach(l => {
+        const ci = l.indexOf(':');
+        if (ci > -1) {
+          c.fillStyle = '#444'; c.font = `700 ${10*S}px Barlow Condensed,Arial Narrow,Arial`;
+          c.letterSpacing = `${1*S}px`;
+          c.fillText(l.slice(0,ci).toUpperCase()+':', 22*S, ty);
+          c.letterSpacing = '0px';
+          c.fillStyle = '#888'; c.font = `600 ${11*S}px Barlow Condensed,Arial Narrow,Arial`;
+          c.fillText(l.slice(ci+1).trim(), 22*S + 80*S, ty);
+        } else {
+          c.fillStyle = '#888'; c.font = `600 ${11*S}px Barlow Condensed,Arial Narrow,Arial`;
+          c.fillText(l, 22*S, ty);
+        }
+        ty += 36*S;
+      });
+      y += TH;
+    }
+
+    /* ── SQUAD ── */
+    const squadTop = y;
+    c.fillStyle = DARK;
+    c.fillRect(0, y, W, SQUAD_H + FOOTER_H*S);
+
+    c.fillStyle = '#444';
+    c.font = `700 ${9*S}px Barlow Condensed,Arial Narrow,Arial`;
+    c.letterSpacing = `${3*S}px`;
+    c.fillText('AUFSTELLUNG', 22*S, y + 36*S);
+    c.letterSpacing = '0px';
+    y += 52*S;
+
+    const playerAreaY = y;
+    nominated.forEach((p, i) => {
+      if (i > 0) { c.fillStyle = '#161616'; c.fillRect(22*S, y - 2, W - 120*S, 2); }
+      // number
+      c.fillStyle = RED;
+      c.font = `900 ${14*S}px Barlow Condensed,Arial Narrow,Arial`;
+      c.textAlign = 'right';
+      c.fillText(String(p.num), 52*S, y + 36*S);
+      c.textAlign = 'left';
+      // name
+      c.fillStyle = '#fff';
+      c.font = `800 ${18*S}px Barlow Condensed,Arial Narrow,Arial`;
+      c.fillText(p.name, 60*S, y + 38*S);
+      // roles
+      const roles = p.roles || (p.role ? [p.role] : []);
+      if (roles.length) {
+        const nameW = c.measureText(p.name).width;
+        c.fillStyle = '#555';
+        c.font = `700 ${10*S}px Barlow Condensed,Arial Narrow,Arial`;
+        c.fillText(roles.join('/'), 60*S + nameW + 8*S, y + 36*S);
+      }
+      y += PLAYER_H * S;
     });
-    const link = document.createElement('a');
-    const gegner = document.getElementById('gegner-select').value || 'Aufstellung';
-    const datum  = document.getElementById('datum').value || '';
-    link.download = 'TSG_' + gegner.replace(/\s+/g,'_') + (datum ? '_' + datum.replace(/\./g,'-') : '') + '.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+
+    /* ── Draw logo then footer ── */
+    const img = new Image();
+    img.onload = () => {
+      const logoW = 100*S;
+      const logoH = logoW * (img.height / img.width);
+      const logoX = W - logoW - 22*S;
+      const logoY = playerAreaY + (nominated.length * PLAYER_H * S) / 2 - logoH / 2;
+      c.globalAlpha = 0.82;
+      c.drawImage(img, logoX, logoY, logoW, logoH);
+      c.globalAlpha = 1;
+
+      /* ── FOOTER ── */
+      const footerY = squadTop + SQUAD_H;
+      c.fillStyle = RED;
+      c.fillRect(0, footerY, W, FOOTER_H*S);
+      c.fillStyle = 'rgba(255,255,255,0.7)';
+      c.font = `700 ${11*S}px Barlow Condensed,Arial Narrow,Arial`;
+      c.letterSpacing = `${2*S}px`;
+      c.textAlign = 'center';
+      c.fillText('LÖWEN IM SPIEL  ·  GEMEINSAM BIS ANS ZIEL', W/2, footerY + 46*S);
+      c.textAlign = 'left'; c.letterSpacing = '0px';
+
+      /* ── EXPORT ── */
+      const imgData = cv.toDataURL('image/png');
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (isIOS) {
+        const w = window.open();
+        w.document.write('<html><head><meta name="viewport" content="width=device-width"></head><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="' + imgData + '" style="width:100%;max-width:500px;display:block"><p style="color:#aaa;font-size:13px;text-align:center;padding:12px">Bild lang drücken → In Fotos sichern</p></body></html>');
+        w.document.close();
+        document.getElementById('dl-hint').style.display = 'block';
+      } else {
+        const a = document.createElement('a');
+        a.download = 'TSG_' + gegner.replace(/\s+/g,'_') + (datum ? '_'+datum.replace(/\./g,'-') : '') + '.png';
+        a.href = imgData; a.click();
+      }
+      btn.textContent = '⬇ Bild speichern';
+      btn.disabled = false;
+    };
+    img.onerror = () => { alert('Logo konnte nicht geladen werden.'); btn.textContent = '⬇ Bild speichern'; btn.disabled = false; };
+    img.src = LOGO;
+
   } catch(e) {
-    alert('Fehler beim Erstellen: ' + e.message);
-  } finally {
+    alert('Fehler: ' + e.message);
     btn.textContent = '⬇ Bild speichern';
     btn.disabled = false;
   }
