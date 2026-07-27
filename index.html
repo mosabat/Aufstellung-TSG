@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="TSG Aufstellung">
 <meta name="theme-color" content="#0d0d0d">
 <title>TSG 1846 – Aufstellung</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -127,7 +128,9 @@ textarea { resize: vertical; min-height: 64px; }
 .modal-hint { color: #888; font-size: 13px; text-align: center; margin-bottom: 16px; line-height: 1.6; }
 .modal-hint strong { color: #fff; }
 .btn-close { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
-  color: var(--text-dim); font-size: 14px; font-weight: 600; padding: 13px 28px; margin-top: 20px; cursor: pointer; }
+  color: var(--text-dim); font-size: 14px; font-weight: 600; padding: 13px 18px; cursor: pointer; }
+.btn-download { flex: 1; background: var(--red); border: none; border-radius: 10px;
+  color: #fff; font-size: 15px; font-weight: 700; padding: 13px 18px; cursor: pointer; }
 
 /* ── GRAPHIC ── */
 .gc { width: 100%; max-width: 400px; background: #0d0d0d; overflow: hidden;
@@ -275,9 +278,12 @@ textarea { resize: vertical; min-height: 64px; }
 
 <!-- MODAL -->
 <div class="modal" id="modal">
-  <p class="modal-hint"><strong>📸 Screenshot machen</strong><br>dann in WhatsApp teilen</p>
+  <p class="modal-hint"><strong>Grafik speichern oder teilen</strong></p>
   <div id="graphic"></div>
-  <button class="btn-close" onclick="closeModal()">✕ Schließen</button>
+  <div style="display:flex;gap:10px;margin-top:20px;width:100%;max-width:400px;">
+    <button class="btn-download" onclick="downloadImage()" id="btn-dl">⬇ Bild speichern</button>
+    <button class="btn-close" onclick="closeModal()">✕</button>
+  </div>
 </div>
 
 <script>
@@ -618,6 +624,32 @@ function generate() {
 
   document.getElementById('modal').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+async function downloadImage() {
+  const btn = document.getElementById('btn-dl');
+  btn.textContent = '⏳ Wird erstellt…';
+  btn.disabled = true;
+  try {
+    const card = document.getElementById('graphic');
+    const canvas = await html2canvas(card, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: '#0d0d0d',
+      logging: false
+    });
+    const link = document.createElement('a');
+    const gegner = document.getElementById('gegner-select').value || 'Aufstellung';
+    const datum  = document.getElementById('datum').value || '';
+    link.download = 'TSG_' + gegner.replace(/\s+/g,'_') + (datum ? '_' + datum.replace(/\./g,'-') : '') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(e) {
+    alert('Fehler beim Erstellen: ' + e.message);
+  } finally {
+    btn.textContent = '⬇ Bild speichern';
+    btn.disabled = false;
+  }
 }
 
 function closeModal() {
