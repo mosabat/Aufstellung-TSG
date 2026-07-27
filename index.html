@@ -89,6 +89,12 @@ textarea { resize: vertical; min-height: 64px; }
 .p-num { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 900; color: var(--red); min-width: 30px; text-align: right; }
 .p-name, .opp-name { flex: 1; font-weight: 600; font-size: 15px; }
 .p-role { font-size: 10px; color: var(--text-muted); background: var(--bg3); border-radius: 5px; padding: 3px 7px; }
+.p-roles { display: flex; gap: 4px; flex-wrap: wrap; }
+.p-role-tag { font-size: 10px; color: var(--text-muted); background: var(--bg3); border-radius: 5px; padding: 3px 7px; cursor: pointer; border: 1px solid var(--border); transition: all .15s; }
+.p-role-tag.active { background: var(--red-dark); border-color: var(--red); color: #fff; }
+.player-item { flex-wrap: wrap; }
+.player-item-top { display: flex; align-items: center; gap: 12px; width: 100%; }
+.player-item-roles { width: 100%; padding-left: 42px; margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
 .btn-del { background: none; border: none; color: #444; font-size: 16px; cursor: pointer; padding: 0 2px; }
 
 /* HA BUTTONS */
@@ -426,9 +432,11 @@ function addPlayer() {
   const name = document.getElementById('new-name').value.trim().toUpperCase();
   const role = document.getElementById('new-role').value;
   if (!num || !name) { alert('Bitte Nummer und Name eingeben.'); return; }
-  if (players.find(p => p.num === num)) { alert('Nummer ' + num + ' bereits vergeben.'); return; }
-  players.push({ num, name, role });
-  players.sort((a,b) => a.num - b.num);
+  // Allow same number if name is different
+  if (players.find(p => p.num === num && p.name === name)) { alert('Dieser Spieler ist bereits vorhanden.'); return; }
+  const roles = role ? [role] : [];
+  players.push({ num, name, roles });
+  players.sort((a,b) => a.num - b.num || a.name.localeCompare(b.name));
   renderList();
   saveToGitHub();
   document.getElementById('new-num').value  = '';
@@ -436,11 +444,22 @@ function addPlayer() {
   document.getElementById('new-role').value = '';
 }
 
-function deletePlayer(num) {
-  if (!confirm('Spieler #' + num + ' entfernen?')) return;
-  players = players.filter(p => p.num !== num);
-  selected.delete(num);
+function deletePlayer(num, name) {
+  if (!confirm('Spieler #' + num + ' ' + name + ' entfernen?')) return;
+  players = players.filter(p => !(p.num === num && p.name === name));
+  selected.delete(num + '_' + name);
   renderList(); renderGrid();
+  saveToGitHub();
+}
+
+function toggleRole(num, name, role) {
+  const p = players.find(p => p.num === num && p.name === name);
+  if (!p) return;
+  if (!p.roles) p.roles = [];
+  const idx = p.roles.indexOf(role);
+  if (idx > -1) p.roles.splice(idx, 1);
+  else p.roles.push(role);
+  renderList();
   saveToGitHub();
 }
 
@@ -448,13 +467,23 @@ function renderList() {
   const el = document.getElementById('player-list');
   document.getElementById('kader-count').textContent = players.length;
   if (!players.length) { el.innerHTML = '<div class="empty">👥<br>Noch keine Spieler angelegt.</div>'; return; }
-  el.innerHTML = players.map(p => `
+  const ROLES = ['TW','C','ETW'];
+  el.innerHTML = players.map(p => {
+    const roles = p.roles || (p.role ? [p.role] : []);
+    const roleTags = ROLES.map(r => {
+      const active = roles.includes(r) ? ' active' : '';
+      return `<span class="p-role-tag${active}" onclick="toggleRole(${p.num},'${p.name}','${r}')">${r}</span>`;
+    }).join('');
+    return `
     <div class="player-item">
-      <span class="p-num">${p.num}</span>
-      <span class="p-name">${p.name}</span>
-      ${p.role ? `<span class="p-role">${p.role}</span>` : ''}
-      <button class="btn-del" onclick="deletePlayer(${p.num})">✕</button>
-    </div>`).join('');
+      <div class="player-item-top">
+        <span class="p-num">${p.num}</span>
+        <span class="p-name">${p.name}</span>
+        <button class="btn-del" onclick="deletePlayer(${p.num},'${p.name}')">✕</button>
+      </div>
+      <div class="player-item-roles">${roleTags}</div>
+    </div>`;
+  }).join('');
 }
 
 /* ══════════════════════════════
@@ -504,17 +533,20 @@ function renderGrid() {
   document.getElementById('sel-count').textContent = selected.size;
   if (!players.length) { el.innerHTML = '<div class="empty" style="grid-column:1/-1">Erst Spieler im Kader anlegen.</div>'; return; }
   el.innerHTML = players.map(p => {
-    const s = selected.has(p.num);
-    return `<div class="card${s?' sel':''}" onclick="toggleSel(${p.num})">
-      ${p.role ? `<span class="c-role">${p.role}</span>` : ''}
+    const key = p.num + '_' + p.name;
+    const s = selected.has(key);
+    const roles = p.roles || (p.role ? [p.role] : []);
+    const roleStr = roles.length ? roles.join(' · ') : '';
+    return `<div class="card${s?' sel':''}" onclick="toggleSel('${key}')">
+      ${roleStr ? `<span class="c-role">${roleStr}</span>` : ''}
       <div class="c-num">${p.num}</div>
       <div class="c-name">${p.name}</div>
     </div>`;
   }).join('');
 }
 
-function toggleSel(num) {
-  selected.has(num) ? selected.delete(num) : selected.add(num);
+function toggleSel(key) {
+  selected.has(key) ? selected.delete(key) : selected.add(key);
   saveToGitHub();
   renderGrid();
 }
@@ -529,7 +561,7 @@ function generate() {
   const datum   = document.getElementById('datum').value || '';
   const uhrzeit = document.getElementById('uhrzeit').value || '';
   const treff   = document.getElementById('treffpunkt').value.trim();
-  const nominated = players.filter(p => selected.has(p.num));
+  const nominated = players.filter(p => selected.has(p.num + '_' + p.name));
 
   const treffHTML = treff ? `<div class="gc-treff">${
     treff.split('\n').filter(Boolean).map(l => {
@@ -540,12 +572,15 @@ function generate() {
     }).join('')
   }</div>` : '';
 
-  const playersHTML = nominated.map(p => `
-    <div class="gc-player">
+  const playersHTML = nominated.map(p => {
+    const roles = p.roles || (p.role ? [p.role] : []);
+    const roleStr = roles.length ? roles.join('/') : '';
+    return `<div class="gc-player">
       <span class="gc-pnum">${p.num}</span>
       <span class="gc-pname">${p.name}</span>
-      ${p.role ? `<span class="gc-ptag">${p.role}</span>` : ''}
-    </div>`).join('');
+      ${roleStr ? `<span class="gc-ptag">${roleStr}</span>` : ''}
+    </div>`;
+  }).join('');
 
   document.getElementById('graphic').innerHTML = `
   <div class="gc">
